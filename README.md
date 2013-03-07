@@ -1,4 +1,4 @@
-Game-of-Life
+CUDA Exor decrypter
 ============
 
-Conway's Game of Life
+This program can decript an exor encrypted text with a key of size 8.
