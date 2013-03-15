@@ -46,12 +46,10 @@ void exor(const int size, const char *secret)
 int
 main(int argc, char *argv[])
 {
-    cudaError_t err = cudaSuccess;
-
     if(argc < 2)
     {
         fprintf(stderr, "No imput file specified!\n");
-        exit(EXIT_FAILURE);
+        return -1;
     }
 
     FILE *f = fopen(argv[1], "r");
@@ -59,7 +57,7 @@ main(int argc, char *argv[])
     if(f == NULL)
     {
         fprintf(stderr, "Failed to open imput file!\n");
-        exit(EXIT_FAILURE);
+        return -1;
     }
 
     int n;
@@ -74,42 +72,23 @@ main(int argc, char *argv[])
     secret[size] = '\0';
 
     char *d_secret = NULL;
-    err = cudaMalloc((void **)&d_secret, size);
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to allocate d_secret! (error: %s)!\n", cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
-
-    err = cudaMemcpy(d_secret, secret, size, cudaMemcpyHostToDevice);
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to copy from host to device! (error: %s)!\n", cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
+    cudaMalloc((void **) &d_secret, size);
+    cudaMemcpy(d_secret, secret, size, cudaMemcpyHostToDevice);
 
     dim3 blocksPerGrid(100, 100, 10);
     dim3 threadsPerBlock(10, 10, 10);
 
     exor<<<blocksPerGrid, threadsPerBlock>>>(size, d_secret);
 
-    if (cudaGetLastError() != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to launch exor kernel!\n");
-        exit(EXIT_FAILURE);
-    }
+    cudaFree(d_secret);
 
-    err = cudaFree(d_secret);
-    if (err != cudaSuccess)
+    cudaDeviceReset();
+    
+    cudaError_t error = cudaGetLastError();
+    if(error != cudaSuccess)
     {
-        fprintf(stderr, "Failed to free d_secret! (error: %s)!\n", cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
-
-    if (cudaDeviceReset() != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to deinitialize the device!\n");
-        exit(EXIT_FAILURE);
+	printf("CUDA error: %s\n", cudaGetErrorString(error));
+	return -1;
     }
 
     fprintf(stderr, "Done\n");
