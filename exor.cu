@@ -87,7 +87,7 @@ main(int argc, char *argv[])
     cudaError_t error = cudaGetLastError();
     if(error != cudaSuccess)
     {
-	printf("CUDA error: %s\n", cudaGetErrorString(error));
+	fprintf(stderr, "CUDA error: %s\n", cudaGetErrorString(error));
 	return -1;
     }
 
