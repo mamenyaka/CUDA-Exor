@@ -8,6 +8,8 @@ __global__
 void exor(const int size, const char *secret)
 {
     char key[KEY_SIZE+1], temp[MAX_SECRET];
+    
+    __syncthreads();
 
     key[0] = blockIdx.x/10 + 48;
     key[1] = blockIdx.x%10 + 48;
