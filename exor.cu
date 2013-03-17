@@ -5,9 +5,9 @@
 #define BUFFER 512
 
 __global__
-void exor(const int size, const char *secret)
+void exor(char *secret)
 {
-    char key[KEY_SIZE+1], temp[MAX_SECRET];
+    char key[KEY_SIZE];
     
     __syncthreads();
 
@@ -20,11 +20,10 @@ void exor(const int size, const char *secret)
     key[6] = threadIdx.y + 48;
     key[7] = threadIdx.z + 48;
 
-    for (int i = 0; i < size; i++)
+    int i = 0;
+    while(secret[i] != '\0')
     {
-        temp[i] = secret[i] ^ key[i % KEY_SIZE];
-
-        switch(temp[i])
+        switch(secret[i] ^ key[i % KEY_SIZE])
         {
         case '|':
         case '~':
@@ -38,11 +37,23 @@ void exor(const int size, const char *secret)
         case '#':
             return;
         }
+        
+        i++;
     }
 
-    temp[size] = '\0';
-    key[KEY_SIZE] = '\0';
-    printf("Key: [%s]\n%s\n\n", key, temp);
+    i = 0;
+    while(secret[i] != '\0')
+    {
+        secret[i] ^= key[i % KEY_SIZE];
+        i++;
+    }
+    
+    secret[i++] = '\n';
+    
+    for(int j = 0; j < 8; j++)
+        secret[i++] = key[j];
+        
+    secret[i++] = '\0';
 }
 
 int
@@ -54,9 +65,9 @@ main(int argc, char *argv[])
         return -1;
     }
 
-    FILE *f = fopen(argv[1], "r");
+    FILE *in = fopen(argv[1], "r");
 
-    if(f == NULL)
+    if(in == NULL)
     {
         fprintf(stderr, "Failed to open imput file!\n");
         return -1;
@@ -66,22 +77,23 @@ main(int argc, char *argv[])
     char secret[MAX_SECRET];
     char *p = secret;
 
-    while (n = fread((void *) p, 1, (p - secret + BUFFER < MAX_SECRET) ? BUFFER : secret + MAX_SECRET - p, f))
+    while (n = fread((void *) p, 1, (p - secret + BUFFER < MAX_SECRET) ? BUFFER : secret + MAX_SECRET - p, in))
         p += n;
 
-    fclose(f);
+    fclose(in);
     int size = p - secret;
     secret[size] = '\0';
 
     char *d_secret = NULL;
-    cudaMalloc((void **) &d_secret, size);
-    cudaMemcpy(d_secret, secret, size, cudaMemcpyHostToDevice);
+    cudaMalloc((void **) &d_secret, size+10);
+    cudaMemcpy(d_secret, secret, size+10, cudaMemcpyHostToDevice);
 
     dim3 blocksPerGrid(100, 100, 10);
     dim3 threadsPerBlock(10, 10, 10);
 
-    exor<<<blocksPerGrid, threadsPerBlock>>>(size, d_secret);
+    exor<<<blocksPerGrid, threadsPerBlock>>>(d_secret);
 
+    cudaMemcpy(secret, d_secret, size+10, cudaMemcpyDeviceToHost);
     cudaFree(d_secret);
 
     cudaDeviceReset();
@@ -92,7 +104,11 @@ main(int argc, char *argv[])
 	fprintf(stderr, "CUDA error: %s\n", cudaGetErrorString(error));
 	return -1;
     }
-
+    
+    FILE *out = fopen("out", "w");
+    fprintf(out, "%s\n\n", secret);
+    fclose(out);
+    
     fprintf(stderr, "Done\n");
     return 0;
 }
