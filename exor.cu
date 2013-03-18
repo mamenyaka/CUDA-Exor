@@ -1,30 +1,26 @@
 #include <stdio.h>
 
-#define MAX_SECRET 200000
+#define MAX_SECRET 8000000
 #define KEY_SIZE 8
 #define BUFFER 512
 
 __global__
-void exor(const int size, const char *secret)
+void exor(const int size, const char *secret, char *key)
 {
-    char key[KEY_SIZE+1], temp[MAX_SECRET];
-    
-    __syncthreads();
+    char temp[KEY_SIZE];
 
-    key[0] = blockIdx.x/10 + 48;
-    key[1] = blockIdx.x%10 + 48;
-    key[2] = blockIdx.y/10 + 48;
-    key[3] = blockIdx.y%10 + 48;
-    key[4] = blockIdx.z + 48;
-    key[5] = threadIdx.x + 48;
-    key[6] = threadIdx.y + 48;
-    key[7] = threadIdx.z + 48;
+    temp[0] = blockIdx.x/10 + 48;
+    temp[1] = blockIdx.x%10 + 48;
+    temp[2] = blockIdx.y/10 + 48;
+    temp[3] = blockIdx.y%10 + 48;
+    temp[4] = blockIdx.z + 48;
+    temp[5] = threadIdx.x + 48;
+    temp[6] = threadIdx.y + 48;
+    temp[7] = threadIdx.z + 48;
 
-    for (int i = 0; i < size; i++)
+    for(int i = 0; i < size; i++)
     {
-        temp[i] = secret[i] ^ key[i % KEY_SIZE];
-
-        switch(temp[i])
+        switch(secret[i] ^ temp[i % KEY_SIZE])
         {
         case '|':
         case '~':
@@ -40,58 +36,51 @@ void exor(const int size, const char *secret)
         }
     }
 
-    temp[size] = '\0';
-    key[KEY_SIZE] = '\0';
-    printf("Key: [%s]\n%s\n\n", key, temp);
+    for(int i = 0; i < KEY_SIZE; i++)
+        key[i] = temp[i];
 }
 
 int
-main(int argc, char *argv[])
+main()
 {
-    if(argc < 2)
-    {
-        fprintf(stderr, "No imput file specified!\n");
-        return -1;
-    }
-
-    FILE *f = fopen(argv[1], "r");
-
-    if(f == NULL)
-    {
-        fprintf(stderr, "Failed to open imput file!\n");
-        return -1;
-    }
-
-    int n;
-    char secret[MAX_SECRET];
+    char secret[MAX_SECRET], key[KEY_SIZE+1];
     char *p = secret;
 
-    while (n = fread((void *) p, 1, (p - secret + BUFFER < MAX_SECRET) ? BUFFER : secret + MAX_SECRET - p, f))
+    while (int n = fread((void *) p, 1, (p - secret + BUFFER < MAX_SECRET) ? BUFFER : secret + MAX_SECRET - p, stdin))
         p += n;
 
-    fclose(f);
     int size = p - secret;
-    secret[size] = '\0';
 
-    char *d_secret = NULL;
+    char *d_secret, *d_key;
     cudaMalloc((void **) &d_secret, size);
+    cudaMalloc((void **) &d_key, KEY_SIZE);
+
     cudaMemcpy(d_secret, secret, size, cudaMemcpyHostToDevice);
 
     dim3 blocksPerGrid(100, 100, 10);
     dim3 threadsPerBlock(10, 10, 10);
 
-    exor<<<blocksPerGrid, threadsPerBlock>>>(size, d_secret);
+    exor<<<blocksPerGrid, threadsPerBlock>>>(size, d_secret, d_key);
+
+    cudaMemcpy(key, d_key, KEY_SIZE, cudaMemcpyDeviceToHost);
 
     cudaFree(d_secret);
-
+    cudaFree(d_key);
     cudaDeviceReset();
-    
+
     cudaError_t error = cudaGetLastError();
     if(error != cudaSuccess)
     {
 	fprintf(stderr, "CUDA error: %s\n", cudaGetErrorString(error));
 	return -1;
     }
+
+    for(int i = 0; i < size; i++)
+        secret[i] ^= key[i % KEY_SIZE];
+
+    secret[size] = '\0';
+    key[KEY_SIZE] = '\0';
+    printf("%s\nKey: %s\n", secret, key);
 
     fprintf(stderr, "Done\n");
     return 0;
