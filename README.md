@@ -18,4 +18,4 @@ $ nvcc exor.cu -o exor -arch=sm_21 CUDA.cu
 
 Then run it
 
-$ ./exor <secret0 >out
+$ ./exor /<secret0 />out
