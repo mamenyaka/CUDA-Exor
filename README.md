@@ -13,7 +13,7 @@ Use on of the demos, or create one of your own
 
 >$ java Encrypter 12345678 &lt;in &gt;out
 
-Compile the decrypter (you need to install the CUDA Toolkit first)
+Compile the decrypter (you need a NVidia GPU with CUDA architecture >= 2.1)
 
 >$ nvcc exor.cu -o exor -arch=sm_21 CUDA.cu
 
