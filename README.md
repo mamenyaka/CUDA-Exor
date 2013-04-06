@@ -10,6 +10,7 @@ How to use
 Use on of the demos, or create one of your own
 
 >$ javac Encrypter.java
+
 >$ java Encrypter 12345678 &lt;in &gt;out
 
 Compile the decrypter (you need to install the CUDA Toolkit first)
