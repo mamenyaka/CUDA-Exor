@@ -1,7 +1,7 @@
 CUDA Exor decrypter
 ============
 
-This program can decript an exor encrypted text with a key of size 8.
+This program can decript under 3 seconds an exor encrypted text (up to 8 MB) with a key of size 8.
 
 
 How to use
