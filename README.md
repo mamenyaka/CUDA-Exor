@@ -15,7 +15,7 @@ Use on of the demos, or create one of your own
 
 Compile the decrypter (you need a NVidia GPU with CUDA architecture >= 2.1)
 
->$ nvcc exor.cu -o exor -arch=sm_21 CUDA.cu
+>$ nvcc exor.cu -o exor -arch=sm_21
 
 Then run it
 
