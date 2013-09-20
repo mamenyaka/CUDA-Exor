@@ -7,7 +7,7 @@ This program can decript under 3 seconds an exor encrypted text (up to 8 MB) wit
 How to use
 ============
 
-Use on of the demos, or create one of your own
+Use one of the demo files or create one of your own
 
 >$ javac Encrypter.java
 
